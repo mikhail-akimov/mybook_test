@@ -5,9 +5,13 @@
     <title>{{ title }}</title>
 </head>
 <body>
-    <div>
-        <p>Test message!</p>
-    </div>
+    {% with messages = get_flashed_messages() %}
+        {% if messages %}
+            {% for message in messages %}
+                <span style="color: red;">{{ message }}</span>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
     <form action="" method="post" novalidate>
         {{ form.hidden_tag() }}
         <p>
