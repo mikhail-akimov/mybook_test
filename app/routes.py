@@ -38,7 +38,7 @@ def index():
 
 def get_books(cookies):
     api_response = get_books_from_api(cookies).json()
-    if api_response['meta']['next']:
+    if api_response.get('meta').get('next'):
         next_page = api_response['meta']['next']
         all_books = api_response
         while next_page:
@@ -53,11 +53,10 @@ def get_books(cookies):
 
 
 def get_books_from_api(cookies, url=GET_BOOKS_URL):
-    header = {'Accept': 'application/json; version=5'}
     api_response = requests.get(
         url,
         cookies=cookies,
-        headers=header,
+        headers={'Accept': 'application/json; version=5'},
     )
     if api_response.status_code == HTTPStatus.UNAUTHORIZED:
         session.delete('session')

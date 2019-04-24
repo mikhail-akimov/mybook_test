@@ -25,8 +25,8 @@ lib_result = [
 
 
 def test_mybook_get_books():
-    assert isinstance(get_books(cookies).json(), dict)
-    assert get_books(cookies).json().get('meta')
+    assert isinstance(get_books(cookies), dict)
+    assert get_books(cookies).get('meta')
 
 
 def test_mybook_get_library():
