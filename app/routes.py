@@ -32,37 +32,38 @@ def index():
         elif response.status_code == HTTPStatus.BAD_REQUEST:
             return str(response.json())
         else:
-            print(response)
-            return 'Oops!'
+            return 'Something went wrong. Please try later.'
     return render_template('index.html', title='Mybook test page', form=form)
 
 
 def get_books(cookies):
+    api_response = get_books_from_api(cookies).json()
+    if api_response['meta']['next']:
+        next_page = api_response['meta']['next']
+        all_books = api_response
+        while next_page:
+            next_page_val = next_page[api_response['meta']['next'].find('?cursor'):]
+            next_page_url = '{0}{1}'.format(GET_BOOKS_URL, next_page_val)
+            next_api_response = get_books_from_api(cookies, next_page_url)
+            next_page = next_api_response.json()['meta']['next']
+            for new_book in next_api_response.json().get('objects'):
+                all_books['objects'].append(new_book)
+        api_response = all_books
+    return api_response
+
+
+def get_books_from_api(cookies, url=GET_BOOKS_URL):
+    header = {'Accept': 'application/json; version=5'}
     api_response = requests.get(
-        GET_BOOKS_URL,
+        url,
         cookies=cookies,
-        headers={'Accept': 'application/json; version=5'},
+        headers=header,
     )
     if api_response.status_code == HTTPStatus.UNAUTHORIZED:
         session.delete('session')
         return redirect(url_for('index'))
     if api_response.status_code != HTTPStatus.OK:
         return 'Something went wrong. Please try later.'
-    api_response = api_response.json()
-    if api_response['meta']['next']:
-        next = api_response['meta']['next']
-        all_books = api_response
-        while next:
-            next_page_val = next[api_response['meta']['next'].find('?cursor'):]
-            next_api_response = requests.get(
-                GET_BOOKS_URL + next_page_val,
-                cookies=cookies,
-                headers={'Accept': 'application/json; version=5'},
-            )
-            next = next_api_response.json()['meta']['next']
-            for new_book in next_api_response.json().get('objects'):
-                all_books['objects'].append(new_book)
-        api_response = all_books
     return api_response
 
 
