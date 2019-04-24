@@ -11,7 +11,7 @@ from http import HTTPStatus
 def index():
     if session.get('session'):
         cookies = {'session': session['session']}
-        books = get_books(cookies).json()['objects']
+        books = get_books(cookies).get('objects')
         lib = get_personal_library(books)
         return render_template(
             'index.html',
@@ -48,6 +48,21 @@ def get_books(cookies):
         return redirect(url_for('index'))
     if api_response.status_code != HTTPStatus.OK:
         return 'Something went wrong. Please try later.'
+    api_response = api_response.json()
+    if api_response['meta']['next']:
+        next = api_response['meta']['next']
+        all_books = api_response
+        while next:
+            next_page_val = next[api_response['meta']['next'].find('?cursor'):]
+            next_api_response = requests.get(
+                GET_BOOKS_URL + next_page_val,
+                cookies=cookies,
+                headers={'Accept': 'application/json; version=5'},
+            )
+            next = next_api_response.json()['meta']['next']
+            for new_book in next_api_response.json().get('objects'):
+                all_books['objects'].append(new_book)
+        api_response = all_books
     return api_response
 
 
