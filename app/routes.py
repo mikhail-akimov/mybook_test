@@ -3,9 +3,8 @@ from app import app
 from flask import render_template, request, session, url_for, redirect
 import requests
 from app.forms import LoginForm
-
-GET_BOOKS_URL = 'https://mybook.ru/api/bookuserlist/'
-AUTH_URL = 'https://mybook.ru/api/auth/'
+from config import GET_BOOKS_URL, AUTH_URL
+from http import HTTPStatus
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -27,11 +26,10 @@ def index():
                                      'password': request.form.get('password'),
                                  }
                                  )
-        if response.status_code == 200:
+        if response.status_code == HTTPStatus.OK:
             session['session'] = response.cookies.get('session')
-            print(session['session'])
             return redirect(url_for('index'))
-        elif response.status_code == 400:
+        elif response.status_code == HTTPStatus.BAD_REQUEST:
             return str(response.json())
         else:
             print(response)
@@ -40,22 +38,26 @@ def index():
 
 
 def get_books(cookies):
-    headers = {'Accept': 'application/json; version=5'}
     api_response = requests.get(
         GET_BOOKS_URL,
         cookies=cookies,
-        headers=headers,
+        headers={'Accept': 'application/json; version=5'},
     )
+    if api_response.status_code == HTTPStatus.UNAUTHORIZED:
+        session.delete('session')
+        return redirect(url_for('index'))
+    if api_response.status_code != HTTPStatus.OK:
+        return 'Something went wrong. Please try later.'
     return api_response
 
 
 def get_personal_library(books):
-    lib = []
-    for book in books:
-        item = {
-            'book_name': book['book']['name'],
-            'book_cover': book['book']['default_cover'],
-            'author': book['book']['main_author']['cover_name'],
+    lib = [
+        {
+            'book_name': book.get('book').get('name'),
+            'book_cover': book.get('book').get('default_cover'),
+            'author': book.get('book').get('main_author').get('cover_name'),
         }
-        lib.append(item)
+        for book in books if book.get('book') is not None
+    ]
     return lib
